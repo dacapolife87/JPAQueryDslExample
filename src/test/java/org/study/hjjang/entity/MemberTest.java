@@ -1,5 +1,6 @@
 package org.study.hjjang.entity;
 
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,6 +10,9 @@ import javax.persistence.EntityManager;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.study.hjjang.entity.QMember.*;
+
 
 @SpringBootTest
 @Transactional
@@ -16,6 +20,8 @@ class MemberTest {
 
     @Autowired
     EntityManager em;
+
+    JPAQueryFactory queryFactory = new JPAQueryFactory(em);
 
     @Test
     public void testEntity(){
@@ -46,6 +52,18 @@ class MemberTest {
             System.out.println("-> member.team"+member.getTeam());
 
         }
+    }
+
+    @Test
+    public void startQuerydsl(){
+
+        Member findMember = queryFactory
+                .select(member)
+                .from(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        assertThat(findMember.getUsername()).isEqualTo("member1");
     }
 
 }
