@@ -11,6 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnit;
 
 import java.util.List;
 
@@ -252,5 +254,73 @@ class MemberTest {
         assertThat(result)
                 .extracting("username")
                 .containsExactly("teamA","teamB");
+    }
+
+    @Test
+    public void join_on_filtering() throws Exception{
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA"))
+                .fetch();
+
+
+        for(Tuple tuple :  result){
+            System.out.println("tuple : "+tuple);
+        }
+
+    }
+
+    @Test
+    public void join_on_no_relation() throws Exception{
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name))
+                .fetch();
+
+        for(Tuple tuple :  result){
+            System.out.println("tuple : "+tuple);
+        }
+    }
+
+    @PersistenceUnit
+    EntityManagerFactory emf;
+
+    @Test
+    public void fetchJoinNo() throws Exception{
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(QMember.member)
+                .where(QMember.member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+
+        assertThat(loaded).as("페치 조인 미적용").isFalse();
+
+    }
+
+    @Test
+    public void fetchJoinUse() throws Exception{
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(QMember.member)
+                .join(member.team,team).fetchJoin()
+                .where(QMember.member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+
+        assertThat(loaded).as("페치 조인 적용").isTrue();
+
     }
 }
